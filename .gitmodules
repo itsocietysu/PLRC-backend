@@ -1,0 +1,3 @@
+[submodule "plrc-project"]
+	path = plrc-project
+	url = git://github.com/itsocietysu/plrc.git
