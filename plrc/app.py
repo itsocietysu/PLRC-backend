@@ -23,7 +23,6 @@ from plrc.utils import obj_to_json, getIntPathParam, getIntQueryParam, getString
 
 from plrc.Entities.EntityBase import EntityBase
 from plrc.Entities.EntityMedia import EntityMedia
-from plrc.Entities.EntityToken import EntityToken
 from plrc.Entities.EntityUser import EntityUser
 
 from plrc.Prop.PropMedia import PropMedia
@@ -152,20 +151,57 @@ def restart(**request_handler_args):
 # ---------------------------
 
 
+@admin_access_type_required
 def addUser(**request_handler_args):
     req = request_handler_args['req']
     resp = request_handler_args['resp']
 
-    resp.body = obj_to_json({"result": "success"})
-    resp.status = falcon.HTTP_200
+    try:
+        params = json.loads(req.stream.read().decode('utf-8'))
+        params['access_token'] = req.context['access_token']
+        id, status_code, error = EntityUser.add_from_json(params)
+
+        if id:
+            objects = EntityUser.get().filter_by(eid=id).all()
+
+            res = []
+            for _ in objects:
+                obj_dict = _.to_dict(['eid', 'email', 'access_type'])
+                res.append(obj_dict)
+
+            resp.body = obj_to_json(res)
+            resp.status = falcon.HTTP_200
+            return
+    except ValueError:
+        resp.status = falcon.HTTP_405
+        return
+
+    resp.body = obj_to_json({'error': error})
+    resp.status = status_code
 
 
+@admin_access_type_required
 def deleteUser(**request_handler_args):
     req = request_handler_args['req']
     resp = request_handler_args['resp']
 
-    resp.body = obj_to_json({"result": "success"})
-    resp.status = falcon.HTTP_200
+    id = getIntPathParam("userId", **request_handler_args)
+
+    if id is not None:
+        res = []
+        try:
+            EntityUser.delete(id)
+        except FileNotFoundError:
+            resp.status = falcon.HTTP_404
+            return
+
+        objects = EntityUser.get().filter_by(eid=id).all()
+        if not len(objects):
+            resp.body = obj_to_json(res)
+            resp.status = falcon.HTTP_200
+            return
+
+    resp.status = falcon.HTTP_400
 
 
 # End of user feature set functions
@@ -252,10 +288,6 @@ class Auth(object):
         try:
             if req.auth:
                 token = req.auth.split(" ")[1].strip()
-                if len(req.auth.split(" ")) > 2:
-                    type = req.auth.split(" ")[2].strip()
-                else:
-                    type = 'swagger'
             else:
                 raise falcon.HTTPUnauthorized(description='Token was not provided in schema [bearer <Token>]',
                                               challenges=['Bearer realm=http://GOOOOGLE'])
@@ -266,9 +298,10 @@ class Auth(object):
         error = 'Authorization required.'
         if token:
             error, acc_type, user_email, user_id, user_name = auth.Validate(
-                token,
-                type
+                cfg['oidc']['plrc_oauth2']['check_token_url'],
+                token
             )
+
 
             if not error:
                 req.context['user_email'] = user_email
@@ -276,7 +309,10 @@ class Auth(object):
                 req.context['user_name'] = user_name
                 req.context['access_type'] = acc_type
 
-                return # passed access token is valid
+                if EntityUser.check_user(user_email):
+                    return # passed access token is valid
+                else:
+                    raise falcon.HTTPLocked(description='User is not granted access.', challenges=['Bearer realm=http://GOOOOGLE'])
 
         raise falcon.HTTPUnauthorized(description=error,
                                       challenges=['Bearer realm=http://GOOOOGLE'])

@@ -1,10 +1,15 @@
 import datetime
 import time
 
+import falcon
+import requests
+
 from sqlalchemy import Column, String, Integer, Date, Sequence
 from sqlalchemy.ext.declarative import declarative_base
 
 from plrc.Entities.EntityBase import EntityBase
+
+from plrc.utils import isAllInData
 
 from plrc.db import DBConnection
 
@@ -12,28 +17,20 @@ Base = declarative_base()
 
 
 class EntityUser(EntityBase, Base):
-    __tablename__ = 'each_user'
+    __tablename__ = 'plrc_user'
 
-    eid = Column(Integer, Sequence('each_seq'), primary_key=True)
-    type = Column(String, primary_key=True)
-    name = Column(String)
-    email = Column(String, primary_key=True)
-    image = Column(String)
+    eid = Column(Integer, Sequence('plrc_seq'), primary_key=True)
+    email = Column(String)
     access_type = Column(String)
     created = Column(Date)
     updated = Column(Date)
 
-    json_serialize_items_list = ['eid', 'type', 'name', 'email', 'image',
-                                 'access_type', 'created', 'updated']
-    required_fields = ['name', 'email', 'image', 'access_type']
+    json_serialize_items_list = ['eid', 'email', 'access_type', 'created', 'updated']
 
-    def __init__(self, type='each', name='user', email=None, image=None, access_type='user'):
+    def __init__(self, email=None, access_type='user'):
         super().__init__()
 
-        self.type = type
-        self.name = name
         self.email = email
-        self.image = image
         self.access_type = access_type
 
         ts = time.time()
@@ -46,15 +43,29 @@ class EntityUser(EntityBase, Base):
         return self.__dict__[key]
 
     @classmethod
-    def update_user(cls, eid, data):
+    def add_from_json(cls, data):
+
+        eid = None
+
+        if isAllInData(['email', 'access_token'], data):
+            email = data['email']
+            access_token = data['access_token']
+            req_url = 'http://each.itsociety.su:5000/oauth2/emailinfo?access_token=%s&email=%s' % (access_token, email)
+            resp = requests.get(req_url)
+            data = resp.json()
+            if resp.status_code == 200:
+                new_entity = EntityUser(email, data['access_type'])
+                eid = new_entity.add()
+                return eid, falcon.HTTP_200, None
+            return eid, falcon.__dict__['HTTP_%s' % resp.status_code], data.error
+
+        return eid, falcon.HTTP_400, 'Invalid parameters supplied'
+
+    @classmethod
+    def check_user(cls, email):
 
         with DBConnection() as session:
-            entity = session.db.query(EntityUser).filter_by(eid=eid).first()
-            if entity:
-                for _ in cls.required_fields:
-                    if _ in data:
-                        setattr(entity, _, data[_])
-
-                ts = time.time()
-                entity.updated = datetime.datetime.fromtimestamp(ts).strftime('%Y-%m-%d %H:%M')
-                session.db.commit()
+            users = session.db.query(EntityUser).filter_by(email=email).all()
+            if len(users):
+                return True
+        return False
