@@ -3,10 +3,13 @@ FROM python:3.6.6
 WORKDIR /usr/src/app
 
 COPY Requirements.txt ./
+COPY plrc_project/requirements.txt ./
 RUN pip install --no-cache-dir -r Requirements.txt
+RUN pip install --no-cache-dir -r requirements.txt
 
 COPY plrc/ ./plrc/
 COPY swagger-ui/ ./swagger-ui/
+COPY graph/ ./graph/
 
 COPY server.py 		./server.py
 COPY config.json 	./config.json
@@ -24,6 +27,6 @@ RUN mkdir -p ./images
 RUN chmod 777 ./images
 VOLUME ./images
 
-EXPOSE 4201
+EXPOSE 4200
 
 CMD ["./startup.sh"]

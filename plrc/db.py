@@ -6,12 +6,12 @@ class DBConnection:
     s_owner_token = None
 
     s_dbParams = {
-        'host': '185.122.59.110',
+        'host': '',
         'port': 5433,
-        'sid': 'each_dev',
-        'user': 'each',
-        'password': "Ellesmera2006",
-        'pool_size': 2
+        'sid': '',
+        'user': '',
+        'password': "",
+        'pool_size': 2,
     }
 
     @classmethod
