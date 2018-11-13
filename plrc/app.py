@@ -6,12 +6,16 @@ import os
 import posixpath
 import re
 import time
+
 import tensorflow as tf
+import cv2
+import numpy as np
 import math
 from urllib.parse import parse_qs
 from collections import OrderedDict
 
 from plrc_project.Utils.label_map_reader import *
+from plrc_project.run import run
 
 import falcon
 from falcon_multipart.middleware import MultipartMiddleware
@@ -19,18 +23,14 @@ from falcon_multipart.middleware import MultipartMiddleware
 from plrc import utils
 from plrc.db import DBConnection
 from plrc.serve_swagger import SpecServer
-from plrc.utils import obj_to_json, getIntPathParam, getIntQueryParam, getStringQueryParam, admin_access_type_required
+from plrc.utils import obj_to_json, getIntPathParam, getQueryParam, admin_access_type_required
 
 from plrc.Entities.EntityBase import EntityBase
-from plrc.Entities.EntityMedia import EntityMedia
+from plrc.Entities.EntityRecognize import EntityRecognize
 from plrc.Entities.EntityUser import EntityUser
-
-from plrc.Prop.PropMedia import PropMedia
 
 from plrc.auth import auth
 
-
-# from plrc.MediaResolver.MediaResolverFactory import MediaResolverFactory
 
 def guess_response_type(path):
     if not mimetypes.inited:
@@ -162,11 +162,11 @@ def addUser(**request_handler_args):
         id, status_code, error = EntityUser.add_from_json(params)
 
         if id:
-            objects = EntityUser.get().filter_by(eid=id).all()
+            objects = EntityUser.get().filter_by(pid=id).all()
 
             res = []
             for _ in objects:
-                obj_dict = _.to_dict(['eid', 'email', 'access_type'])
+                obj_dict = _.to_dict(['pid', 'email', 'access_type'])
                 res.append(obj_dict)
 
             resp.body = obj_to_json(res)
@@ -195,7 +195,7 @@ def deleteUser(**request_handler_args):
             resp.status = falcon.HTTP_404
             return
 
-        objects = EntityUser.get().filter_by(eid=id).all()
+        objects = EntityUser.get().filter_by(pid=id).all()
         if not len(objects):
             resp.body = obj_to_json(res)
             resp.status = falcon.HTTP_200
@@ -216,11 +216,25 @@ def recognize(**request_handler_args):
     req = request_handler_args['req']
     resp = request_handler_args['resp']
 
-    resp.body = obj_to_json({"result": "success"})
-    resp.status = falcon.HTTP_200
+    image = getQueryParam('image', **request_handler_args)
+    content_type = image.headers._headers[1][1]
+    if image is not None and re.match("image", content_type):
+
+        _bytes = image.file.read()
+        _img = cv2.imdecode(np.fromstring(_bytes, np.uint8), cv2.IMREAD_COLOR)
+
+        desc = run(_img, graph)
+
+        pid = EntityRecognize.save(1, _img, desc)
+
+        resp.body = obj_to_json({"result": "success"})
+        resp.status = falcon.HTTP_200
+        return
+
+    resp.status = falcon.HTTP_400
 
 
-def positFurniture(**request_handler_args):
+def layout(**request_handler_args):
     req = request_handler_args['req']
     resp = request_handler_args['resp']
 
@@ -238,7 +252,7 @@ operation_handlers = {
 
     # Positioning
     'recognize':            [recognize],
-    'positFurniture':       [positFurniture],
+    'layout':               [layout],
 
     'getVersion':           [getVersion],
     'restart':              [restart],
@@ -298,7 +312,7 @@ class Auth(object):
         error = 'Authorization required.'
         if token:
             error, acc_type, user_email, user_id, user_name = auth.Validate(
-                cfg['oidc']['plrc_oauth2']['check_token_url'],
+                cfg['oidc']['each_oauth2']['check_token_url'],
                 token
             )
 
@@ -351,8 +365,6 @@ if 'server_host' in cfg:
         baseURL = swagger_json['basePath']
 
     EntityBase.host = server_host + baseURL
-    EntityBase.MediaCls = EntityMedia
-    EntityBase.MediaPropCls = PropMedia
 
     json_string = json.dumps(swagger_json)
 

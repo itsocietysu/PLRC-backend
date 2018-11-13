@@ -19,13 +19,13 @@ Base = declarative_base()
 class EntityUser(EntityBase, Base):
     __tablename__ = 'plrc_user'
 
-    eid = Column(Integer, Sequence('plrc_seq'), primary_key=True)
+    pid = Column(Integer, Sequence('plrc_seq'), primary_key=True)
     email = Column(String)
     access_type = Column(String)
     created = Column(Date)
     updated = Column(Date)
 
-    json_serialize_items_list = ['eid', 'email', 'access_type', 'created', 'updated']
+    json_serialize_items_list = ['pid', 'email', 'access_type', 'created', 'updated']
 
     def __init__(self, email=None, access_type='user'):
         super().__init__()
@@ -45,7 +45,7 @@ class EntityUser(EntityBase, Base):
     @classmethod
     def add_from_json(cls, data):
 
-        eid = None
+        pid = None
 
         if isAllInData(['email', 'access_token'], data):
             email = data['email']
@@ -57,9 +57,9 @@ class EntityUser(EntityBase, Base):
                 new_entity = EntityUser(email, data['access_type'])
                 eid = new_entity.add()
                 return eid, falcon.HTTP_200, None
-            return eid, falcon.__dict__['HTTP_%s' % resp.status_code], data.error
+            return pid, falcon.__dict__['HTTP_%s' % resp.status_code], data.error
 
-        return eid, falcon.HTTP_400, 'Invalid parameters supplied'
+        return pid, falcon.HTTP_400, 'Invalid parameters supplied'
 
     @classmethod
     def check_user(cls, email):

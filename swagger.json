@@ -170,16 +170,18 @@
         "summary": "Recognize",
         "description": "Recognize",
         "operationId": "recognize",
-        "consumes": ["multipart/form-data"],
+        "consumes": [
+          "multipart/form-data"
+        ],
         "produces": [
           "application/json"
         ],
         "parameters": [
           {
             "in": "formData",
-            "name": "upfile",
+            "name": "image",
             "type": "file",
-            "description": "The file to upload.",
+            "description": "The image to upload.",
             "required": true
           }
         ],
@@ -208,7 +210,7 @@
         ],
         "summary": "Furniture positioning",
         "description": "Furniture positioning",
-        "operationId": "positFurniture",
+        "operationId": "layout",
         "produces": [
           "application/json"
         ],
