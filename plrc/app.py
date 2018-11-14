@@ -331,7 +331,7 @@ profile = args.profile
 # configure
 with open(cfgPath) as f:
     cfg = utils.GetAuthProfile(json.load(f), profile, args)
-    DBConnection.configure(**cfg['each_db'])
+    DBConnection.configure(**cfg['plrc_db'])
     if 'oidc' in cfg:
         cfg_oidc = cfg['oidc']
 
