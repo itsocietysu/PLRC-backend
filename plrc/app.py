@@ -7,7 +7,6 @@ import posixpath
 import re
 import time
 
-import tensorflow as tf
 import cv2
 import numpy as np
 import math
@@ -15,6 +14,7 @@ from urllib.parse import parse_qs
 from collections import OrderedDict
 
 from plrc_project.Utils.label_map_reader import *
+from plrc_project.Utils.load_graph import *
 from plrc_project.run import run
 
 import falcon
@@ -119,16 +119,6 @@ def httpDefault(**request_handler_args):
     resp.body = buffer
 
 
-def load_graph(graph_location):
-    with tf.gfile.GFile(graph_location, "rb") as f:
-        graph_def = tf.GraphDef()
-        graph_def.ParseFromString(f.read())
-
-    with tf.Graph().as_default() as graph:
-        tf.import_graph_def(graph_def, name='')
-    return graph
-
-
 def getVersion(**request_handler_args):
     resp = request_handler_args['resp']
     resp.status = falcon.HTTP_200
@@ -139,9 +129,9 @@ def getVersion(**request_handler_args):
 def restart(**request_handler_args):
     resp = request_handler_args['resp']
 
-    global graph, labels
+    global graph, label_map
     graph = load_graph('./graph/frozen_inference_graph.pb')
-    labels = label_map_to_dict(load_label_map_file('./graph/label_map.pbtxt'))
+    label_map = label_map_to_dict(load_label_map_file('./graph/label_map.pbtxt'))
 
     resp.body = obj_to_json({"result": "success"})
     resp.status = falcon.HTTP_200
@@ -223,7 +213,7 @@ def recognize(**request_handler_args):
         _bytes = image.file.read()
         _img = cv2.imdecode(np.fromstring(_bytes, np.uint8), cv2.IMREAD_COLOR)
 
-        desc = run(_img, graph)
+        desc = run(_img, graph, label_map)
 
         pid = EntityRecognize.save(1, _img, desc)
 
@@ -375,6 +365,6 @@ with open('swagger_temp.json') as f:
     server.load_spec_swagger(f.read())
 
 graph = load_graph('./graph/frozen_inference_graph.pb')
-labels = label_map_to_dict(load_label_map_file('./graph/label_map.pbtxt'))
+label_map = label_map_to_dict(load_label_map_file('./graph/label_map.pbtxt'))
 
 api.add_sink(server, r'/')

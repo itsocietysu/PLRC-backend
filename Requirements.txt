@@ -7,5 +7,4 @@ base
 numpy
 matplotlib
 falcon-multipart
-tensorflow
 opencv-python

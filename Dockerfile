@@ -3,13 +3,13 @@ FROM python:3.6.6
 WORKDIR /usr/src/app
 
 COPY Requirements.txt ./
-COPY plrc_project/requirements.txt ./
 RUN pip install --no-cache-dir -r Requirements.txt
-RUN pip install --no-cache-dir -r requirements.txt
 
 COPY plrc/ ./plrc/
+COPY plrc_project/ ./plrc_project/
+RUN pip install --no-cache-dir -r plrc_project/requirements.txt
+
 COPY swagger-ui/ ./swagger-ui/
-COPY graph/ ./graph/
 
 COPY server.py 		./server.py
 COPY config.json 	./config.json
@@ -23,9 +23,13 @@ RUN mkdir -p ./logs
 RUN chmod 777 ./logs
 VOLUME ./logs
 
-RUN mkdir -p ./images
-RUN chmod 777 ./images
-VOLUME ./images
+RUN mkdir -p ./results
+RUN chmod 777 ./results
+VOLUME ./results
+
+RUN mkdir -p ./graph
+RUN chmod 777 ./graph
+VOLUME ./graph
 
 EXPOSE 4200
 
