@@ -16,7 +16,7 @@ class EntityBase:
     def to_dict(self, items=[]):
         def fullfill_entity(key, value):
             if key == 'url':
-                value = '%s%s' % (EntityBase.host, value[1:])
+                value = 'http://%s%s' % (EntityBase.host, value[1:])
             return value
 
         def dictionate_entity(entity):
@@ -40,7 +40,7 @@ class EntityBase:
         with DBConnection() as session:
             session.db.add(self)
             session.db.commit()
-            return self.eid
+            return self.pid
 
         return None
 

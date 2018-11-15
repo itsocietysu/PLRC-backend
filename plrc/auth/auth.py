@@ -1,9 +1,5 @@
-#from plrc.auth.config import CONFIG, PROVIDER
 import urllib
 import falcon
-
-#def Configure(**kwargs):
-#    CONFIG.update(kwargs)
 
 
 def Validate(url, token):

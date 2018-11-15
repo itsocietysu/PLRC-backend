@@ -16,16 +16,16 @@ from plrc.db import DBConnection
 
 Base = declarative_base()
 
+
 class EntityRecognize(EntityBase, Base):
     __tablename__ = 'plrc_recognize'
 
     pid = Column(Integer, Sequence('plrc_seq'), primary_key=True)
     ownerid = Column(Integer)
     url = Column(String)
-    type = Column(String)
     created = Column(Date)
 
-    json_serialize_items_list = ['pid', 'url', 'created']
+    json_serialize_items_list = ['pid', 'ownerid', 'url', 'created']
 
     def __init__(self, ownerid, url):
         super().__init__()
@@ -68,6 +68,6 @@ class EntityRecognize(EntityBase, Base):
                 with zipf.open('%s.png' % _name, 'w') as imf:
                     imf.write(cv2.imencode(".png", img)[1])
 
-            # pid = EntityRecognize(owner_id, _url).add()
+            pid = EntityRecognize(owner_id, _url).add()
 
         return pid

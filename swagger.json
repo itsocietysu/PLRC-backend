@@ -4,7 +4,7 @@
     "version": "0.0.1",
     "title": "PLRC"
   },
-  "host": "127.0.0.1:4201",
+  "host": "127.0.0.1:4200",
   "basePath": "/plrc",
   "tags": [
     {
@@ -183,6 +183,13 @@
             "type": "file",
             "description": "The image to upload.",
             "required": true
+          },
+          {
+            "in": "formData",
+            "name": "json",
+            "type": "file",
+            "description": "The json to upload.",
+            "required": false
           }
         ],
         "responses": {

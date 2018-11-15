@@ -7,6 +7,7 @@ import posixpath
 import re
 import time
 
+import zipfile
 import cv2
 import numpy as np
 import math
@@ -102,7 +103,7 @@ def httpDefault(**request_handler_args):
             buffer = f.read()
             if path.endswith('index.html'):
                 str = buffer.decode()
-                str = str.replace('127.0.0.1:4201', server_host)
+                str = str.replace('127.0.0.1:4200', server_host)
                 buffer = str.encode()
                 length = len(buffer)
 
@@ -209,16 +210,31 @@ def recognize(**request_handler_args):
     content_type = image.headers._headers[1][1]
     if image is not None and re.match("image", content_type):
 
-        _bytes = image.file.read()
-        _img = cv2.imdecode(np.fromstring(_bytes, np.uint8), cv2.IMREAD_COLOR)
+        try:
+            _bytes = image.file.read()
+            _img = cv2.imdecode(np.fromstring(_bytes, np.uint8), cv2.IMREAD_COLOR)
 
-        desc = run(_img, graph, label_map)
+            desc = run(_img, graph, label_map)
 
-        pid = EntityRecognize.save(1, _img, desc)
+            pid = EntityRecognize.save(req.context['user_id'], _img, desc)
+            if pid:
+                objects = EntityRecognize.get().filter_by(pid=pid).all()
 
-        resp.body = obj_to_json({"result": "success"})
-        resp.status = falcon.HTTP_200
-        return
+                res = []
+                for _ in objects:
+                    obj_dict = _.to_dict()
+                    res.append(obj_dict)
+
+                resp.body = obj_to_json(res)
+                resp.status = falcon.HTTP_200
+
+                return
+
+            resp.status = falcon.HTTP_501
+            return
+        except ValueError:
+            resp.status = falcon.HTTP_405
+            return
 
     resp.status = falcon.HTTP_400
 
@@ -277,7 +293,7 @@ class Auth(object):
         # skip authentication for version, UI and Swagger
         if re.match('(/plrc/version|'
                      '/plrc/settings/urls|'
-                     '/plrc/images|'
+                     '/plrc/results|'
                      '/plrc/ui|'
                      '/plrc/swagger\.json|'
                      '/plrc/swagger-temp\.json|'
@@ -305,7 +321,6 @@ class Auth(object):
                 token
             )
 
-
             if not error:
                 req.context['user_email'] = user_email
                 req.context['user_id'] = user_id
@@ -315,7 +330,8 @@ class Auth(object):
                 if EntityUser.check_user(user_email):
                     return # passed access token is valid
                 else:
-                    raise falcon.HTTPLocked(description='User is not granted access.', challenges=['Bearer realm=http://GOOOOGLE'])
+                    raise falcon.HTTPLocked(description='User is not granted access.',
+                                            challenges=['Bearer realm=http://GOOOOGLE'])
 
         raise falcon.HTTPUnauthorized(description=error,
                                       challenges=['Bearer realm=http://GOOOOGLE'])
@@ -337,8 +353,8 @@ with open(cfgPath) as f:
 general_executor = ftr.ThreadPoolExecutor(max_workers=20)
 
 # change line to enable OAuth autorization:
-#wsgi_app = api = falcon.API(middleware=[CORS(), Auth(), MultipartMiddleware()])
-wsgi_app = api = falcon.API(middleware=[CORS(), MultipartMiddleware()])
+wsgi_app = api = falcon.API(middleware=[CORS(), Auth(), MultipartMiddleware()])
+# wsgi_app = api = falcon.API(middleware=[CORS(), MultipartMiddleware()])
 
 server = SpecServer(operation_handlers=operation_handlers)
 

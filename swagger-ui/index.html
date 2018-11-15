@@ -74,11 +74,11 @@ window.onload = function() {
 
   // Build a system
   const ui = SwaggerUIBundle({
-    url: "http://127.0.0.1:4201/plrc/swagger.json",
+    url: "http://127.0.0.1:4200/plrc/swagger.json",
     dom_id: '#swagger-ui',
     deepLinking: true,
       enableCORS: true,
-    oauth2RedirectUrl: "http://127.0.0.1:4201/plrc/swagger-ui/oauth2-redirect.html",
+    oauth2RedirectUrl: "http://127.0.0.1:4200/plrc/swagger-ui/oauth2-redirect.html",
     presets: [
       SwaggerUIBundle.presets.apis,
       SwaggerUIStandalonePreset
@@ -90,7 +90,7 @@ window.onload = function() {
   });
 
   ui.initOAuth({
-      clientId: "RwFuaDC2TifPUf9jg0Nv71eQeLlVLorRzeXcADqjT0Ye3wWw",
+      clientId: "EPXNUkHeIBXpVISsNTfTNG3HSMm5USy5LJHTLGCXCr7xyD9v",
       clientSecret: ""
   });
 
