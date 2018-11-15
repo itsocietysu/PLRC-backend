@@ -326,6 +326,7 @@ class Auth(object):
                 req.context['user_id'] = user_id
                 req.context['user_name'] = user_name
                 req.context['access_type'] = acc_type
+                req.context['access_token'] = token
 
                 if EntityUser.check_user(user_email):
                     return # passed access token is valid
