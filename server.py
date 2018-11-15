@@ -1,7 +1,7 @@
 import os
 import sys
 
-sys.path.append(os.getcwd() + '\\plrc_project')
+sys.path.append(os.getcwd() + '/plrc_project')
 
 from waitress import serve
 from plrc.app import wsgi_app, cfg
