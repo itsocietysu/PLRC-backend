@@ -174,7 +174,8 @@
           "multipart/form-data"
         ],
         "produces": [
-          "application/json"
+          "application/json",
+          "application/octet-stream"
         ],
         "parameters": [
           {

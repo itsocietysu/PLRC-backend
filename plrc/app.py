@@ -203,11 +203,33 @@ def deleteUser(**request_handler_args):
 
 
 def recognize(**request_handler_args):
+    def resp_json(pid, name):
+        objects = EntityRecognize.get().filter_by(pid=pid).all()
+
+        res = []
+        for _ in objects:
+            obj_dict = _.to_dict()
+            res.append(obj_dict)
+        resp.body = obj_to_json(res)
+
+    def resp_octet(pid, name):
+        resp.body = open('./results/%s.zip' % name, 'rb').read()
+
+        resp.set_header("Content-Description", "Zip transfer")
+        resp.set_header("Content-type", "application/octet-stream")
+        resp.set_header("Content-Disposition", "attachment; filename=%s.zip" % name)
+        resp.set_header("Content-Transfer-Encoding", "binary")
+
     req = request_handler_args['req']
     resp = request_handler_args['resp']
 
+    RESP_MAPPING = {
+        'json': resp_json,
+        'octet-stream': resp_octet
+    }
+
     image = getQueryParam('image', **request_handler_args)
-    content_type = image.headers._headers[1][1]
+    content_type = image.headers["Content-Type"]
     if image is not None and re.match("image", content_type):
 
         try:
@@ -216,18 +238,15 @@ def recognize(**request_handler_args):
 
             desc = run(_img, graph, label_map)
 
-            pid = EntityRecognize.save(req.context['user_id'], _img, desc)
+            pid, name = EntityRecognize.save(req.context['user_id'], _img, desc)
             if pid:
-                objects = EntityRecognize.get().filter_by(pid=pid).all()
+                try:
+                    RESP_MAPPING[req.get_header("Accept")[12:]](pid, name)
+                except KeyError:
+                    resp.status = falcon.HTTP_405
+                    return
 
-                res = []
-                for _ in objects:
-                    obj_dict = _.to_dict()
-                    res.append(obj_dict)
-
-                resp.body = obj_to_json(res)
                 resp.status = falcon.HTTP_200
-
                 return
 
             resp.status = falcon.HTTP_501

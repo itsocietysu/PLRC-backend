@@ -56,6 +56,7 @@ class EntityRecognize(EntityBase, Base):
     def save(cls, owner_id, img, desc):
 
         pid = None
+        name = None
 
         if type(img) is np.ndarray:
             _name = uuid.uuid4().hex
@@ -69,5 +70,6 @@ class EntityRecognize(EntityBase, Base):
                     imf.write(cv2.imencode(".png", img)[1])
 
             pid = EntityRecognize(owner_id, _url).add()
+            name = _name
 
-        return pid
+        return pid, name
